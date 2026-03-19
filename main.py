@@ -98,11 +98,11 @@ class InterfaceTerminal:
         """Menu do administrador com todas as opções"""
         print("1. Cadastrar Ingresso")
         print("2. Listar Ingressos")
-        print("3. Atualizar Ingresso")          # NOVO
-        print("4. Deletar Ingresso")             # NOVO
+        print("3. Atualizar Ingresso")
+        print("4. Deletar Ingresso")
         print("5. Listar Usuários")
-        print("6. Atualizar Usuário")            # NOVO
-        print("7. Deletar Usuário")              # NOVO
+        print("6. Atualizar Usuário")
+        print("7. Deletar Usuário")
         print("8. Relatório: Maiores Públicos (Top 10)")
         print("9. Relatório: Maiores Compradores (Top 10)")
         print("0. Logout")
@@ -164,7 +164,7 @@ class InterfaceTerminal:
         try:
             preco = float(input("Preço: "))
             quantidade = int(input("Quantidade: "))
-            data = input("Data (YYYY-MM-DD HH:MM): ")
+            data = input("Data (DD/MM/YYYY HH:MM): ")
 
             self.sistema_service.cadastrar_ingresso(evento, preco, quantidade, data)
 

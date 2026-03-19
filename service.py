@@ -1,6 +1,6 @@
 from repository import UsuarioRepository, IngressoRepository, CompraRepository
 from models import Usuario, Ingresso, CompraIngresso
-
+from datetime import datetime
 class AuthService:
     def __init__(self):
         self.repo = UsuarioRepository()
@@ -33,8 +33,26 @@ class SistemaService:
         return self.usuario_repo.find_all()
 
     # --- Ingressos ---
-    def cadastrar_ingresso(self, evento, preco, quantidade, data):
-        novo_ingresso = Ingresso(evento=evento, preco=preco, quantidade_disponivel=quantidade, data_evento=data)
+    def cadastrar_ingresso(self, evento, preco, quantidade, data_br):
+        try:
+            # Tenta ler no formato brasileiro: dd/mm/aaaa hh:mm
+            data_obj = datetime.strptime(data_br, "%d/%m/%Y %H:%M")
+
+            # Converte para o formato que o MySQL entende
+            data_sql = data_obj.strftime("%Y-%m-%d %H:%M:%S")
+
+        except ValueError:
+            raise Exception("Formato de data inválido! Use: DD/MM/YYYY HH:MM")
+
+        if preco < 0 or quantidade < 0:
+            raise Exception("Preço ou Quantidade inválidos!")
+
+        novo_ingresso = Ingresso(
+            evento=evento,
+            preco=preco,
+            quantidade_disponivel=quantidade,
+            data_evento=data_sql  # Enviamos a data já formatada para o SQL
+        )
         return self.ingresso_repo.create(novo_ingresso)
 
     def listar_ingressos(self):
