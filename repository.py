@@ -1,11 +1,9 @@
 from database import Database
 from models import Usuario, Ingresso, CompraIngresso
 
-
 class BaseRepository:
     def __init__(self):
         self.db = Database()
-
 
 class UsuarioRepository(BaseRepository):
     def create(self, usuario: Usuario):
@@ -59,7 +57,6 @@ class UsuarioRepository(BaseRepository):
         cursor.close()
         return True
 
-
 class IngressoRepository(BaseRepository):
     def create(self, ingresso: Ingresso):
         cursor = self.db.get_cursor(dictionary=False)
@@ -91,8 +88,7 @@ class IngressoRepository(BaseRepository):
         cursor = self.db.get_cursor(dictionary=False)
         if not cursor: return False
         query = "UPDATE ingresso SET evento=%s, preco=%s, quantidade_disponivel=%s, data_evento=%s WHERE id=%s"
-        cursor.execute(query, (ingresso.evento, ingresso.preco, ingresso.quantidade_disponivel, ingresso.data_evento,
-                               ingresso.id))
+        cursor.execute(query, (ingresso.evento, ingresso.preco, ingresso.quantidade_disponivel, ingresso.data_evento, ingresso.id))
         self.db.commit()
         cursor.close()
         return True
@@ -104,7 +100,6 @@ class IngressoRepository(BaseRepository):
         self.db.commit()
         cursor.close()
         return True
-
 
 class CompraRepository(BaseRepository):
     def create(self, compra: CompraIngresso):
@@ -119,7 +114,7 @@ class CompraRepository(BaseRepository):
             """
             cursor.execute(query_update_estoque, (compra.quantidade, compra.ingresso_id, compra.quantidade))
             if cursor.rowcount == 0: raise Exception("Estoque insuficiente!")
-
+            
             query_compra = "INSERT INTO compra_ingresso (usuario_id, ingresso_id, quantidade, valor_total) VALUES (%s, %s, %s, %s)"
             cursor.execute(query_compra, (compra.usuario_id, compra.ingresso_id, compra.quantidade, compra.valor_total))
             conn.commit()
