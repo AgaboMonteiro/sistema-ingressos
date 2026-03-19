@@ -23,7 +23,8 @@ class Database:
                     password=DB_CONFIG['password'],
                     database=DB_CONFIG['database'],
                     ssl_ca=DB_CONFIG.get('ssl_ca'), # O caminho para o ca.pem
-                    ssl_disabled=False # Garante que SSL esteja habilitado
+                    ssl_disabled=False, # Garante que SSL esteja habilitado
+                    autocommit = True
                 )
                 self.create_tables()
             return self.connection
