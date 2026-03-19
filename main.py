@@ -320,79 +320,85 @@ class InterfaceTerminal:
         """Tela para atualizar um ingresso"""
         self.limpar_tela()
         self.exibir_titulo("ATUALIZAR INGRESSO")
-        
-        # Mostrar lista de ingressos
+
         ingressos = self.sistema_service.listar_ingressos()
         if not ingressos:
             print("Nenhum ingresso cadastrado.")
             input("\nPressione Enter para voltar...")
             return
-        
-        # Exibir tabela de ingressos
-        data = [[i.id, i.evento, f"R${i.preco:.2f}", i.quantidade_disponivel, i.data_evento] 
-                for i in ingressos]
-        print(tabulate(data, headers=["ID", "Evento", "Preço", "Qtd", "Data"], tablefmt="grid"))
-        
+
+        # AJUSTE 1: Exibir a data no formato BR na tabela
+        data_tabela = []
+        for i in ingressos:
+            # Tenta formatar se for objeto datetime, se for string apenas exibe
+            data_formatada = i.data_evento.strftime("%d/%m/%Y %H:%M") if hasattr(i.data_evento,
+                                                                                 'strftime') else i.data_evento
+            data_tabela.append([i.id, i.evento, f"R${i.preco:.2f}", i.quantidade_disponivel, data_formatada])
+
+        print(tabulate(data_tabela, headers=["ID", "Evento", "Preço", "Qtd", "Data"], tablefmt="grid"))
+
         try:
             id_ingresso = int(input("\nID do ingresso que deseja atualizar: "))
             ingresso = self.sistema_service.buscar_ingresso_por_id(id_ingresso)
-            
+
             if not ingresso:
                 print("Ingresso não encontrado!")
                 input("\nPressione Enter para voltar...")
                 return
-            
+
+            # AJUSTE 2: Formatar a data atual para o prompt de edição
+            data_atual_br = ingresso.data_evento.strftime("%d/%m/%Y %H:%M") if hasattr(ingresso.data_evento,
+                                                                                       'strftime') else ingresso.data_evento
+
             print(f"\nAtualizando: {ingresso.evento}")
             print("(Deixe em branco para manter o valor atual)")
-            
+
             novo_evento = input(f"Novo nome do evento [{ingresso.evento}]: ").strip()
-            
+
             try:
                 novo_preco_str = input(f"Novo preço [R${ingresso.preco:.2f}]: ").strip()
                 novo_preco = float(novo_preco_str) if novo_preco_str else None
             except ValueError:
                 print("Preço inválido! Mantendo valor atual.")
                 novo_preco = None
-            
+
             try:
                 nova_qtd_str = input(f"Nova quantidade [{ingresso.quantidade_disponivel}]: ").strip()
                 nova_qtd = int(nova_qtd_str) if nova_qtd_str else None
             except ValueError:
                 print("Quantidade inválida! Mantendo valor atual.")
                 nova_qtd = None
-            
-            nova_data = input(f"Nova data [{ingresso.data_evento}]: ").strip()
-            
+
+            # AJUSTE 3: Dica do input no padrão BR
+            nova_data_br = input(f"Nova data [{data_atual_br}]: ").strip()
+
             print("\n" + "=" * 40)
             print("RESUMO DA ATUALIZAÇÃO:")
-            if novo_evento:
-                print(f"Evento: {ingresso.evento} -> {novo_evento}")
-            if novo_preco:
-                print(f"Preço: R${ingresso.preco:.2f} -> R${novo_preco:.2f}")
-            if nova_qtd:
-                print(f"Quantidade: {ingresso.quantidade_disponivel} -> {nova_qtd}")
-            if nova_data:
-                print(f"Data: {ingresso.data_evento} -> {nova_data}")
-            
+            if novo_evento: print(f"Evento: {ingresso.evento} -> {novo_evento}")
+            if novo_preco: print(f"Preço: R${ingresso.preco:.2f} -> R${novo_preco:.2f}")
+            if nova_qtd: print(f"Quantidade: {ingresso.quantidade_disponivel} -> {nova_qtd}")
+            if nova_data_br: print(f"Data: {data_atual_br} -> {nova_data_br}")
+
             confirmar = input("\nConfirmar atualização? (s/n): ").lower()
-            
+
             if confirmar == 's':
+                # AJUSTE 4: Passando nova_data_br para o service (que já sabe converter)
                 self.sistema_service.atualizar_ingresso(
                     id_ingresso,
                     evento=novo_evento if novo_evento else None,
                     preco=novo_preco,
                     quantidade=nova_qtd,
-                    data=nova_data if nova_data else None
+                    data_br=nova_data_br if nova_data_br else None
                 )
                 print("\n✅ Ingresso atualizado com sucesso!")
             else:
                 print("\nOperação cancelada.")
-            
+
         except ValueError:
             print("\nErro: ID inválido!")
         except Exception as e:
             print(f"\nErro: {e}")
-        
+
         input("\nPressione Enter para voltar...")
 
     def tela_deletar_ingresso(self):

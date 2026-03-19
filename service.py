@@ -2,6 +2,7 @@ from repository import UsuarioRepository, IngressoRepository, CompraRepository
 from models import Usuario, Ingresso, CompraIngresso
 from datetime import datetime
 class AuthService:
+    
     def __init__(self):
         self.repo = UsuarioRepository()
         self.usuario_logado = None
@@ -21,6 +22,33 @@ class SistemaService:
         self.usuario_repo = UsuarioRepository()
         self.ingresso_repo = IngressoRepository()
         self.compra_repo = CompraRepository()
+        
+    # NOVO: Método que estava faltando para o Delete/Update funcionar
+    def buscar_usuario_por_id(self, id_usuario):
+        return self.usuario_repo.find_by_id(id_usuario)
+
+    # NOVO: Método de atualizar usuário
+    def atualizar_usuario(self, id_usuario, nome=None, email=None, senha=None, tipo=None):
+        usuario = self.usuario_repo.find_by_id(id_usuario)
+        if not usuario:
+            raise Exception("Usuário não encontrado!")
+        
+        if email and email != usuario.email:
+            if self.usuario_repo.find_by_email(email):
+                raise Exception("Email já cadastrado por outro usuário!")
+        
+        if nome: usuario.nome = nome
+        if email: usuario.email = email
+        if senha: usuario.senha = senha
+        if tipo: usuario.tipo = tipo
+        
+        return self.usuario_repo.update(usuario)
+
+    # NOVO: Método de deletar usuário
+    def deletar_usuario(self, id_usuario):
+        if not self.usuario_repo.find_by_id(id_usuario):
+            raise Exception("Usuário não encontrado!")
+        return self.usuario_repo.delete(id_usuario)
 
     # --- USUÁRIOS ---
     def cadastrar_usuario(self, nome, email, senha, tipo='cliente'):
@@ -61,14 +89,24 @@ class SistemaService:
     def buscar_ingresso_por_id(self, id_ingresso):
         return self.ingresso_repo.find_by_id(id_ingresso)
 
-    def atualizar_ingresso(self, id_ingresso, evento=None, preco=None, quantidade=None, data=None):
+    def atualizar_ingresso(self, id_ingresso, evento=None, preco=None, quantidade=None, data_br=None):
         ingresso = self.ingresso_repo.find_by_id(id_ingresso)
-        if not ingresso: raise Exception("Ingresso não encontrado!")
+        if not ingresso: 
+            raise Exception("Ingresso não encontrado!")
         
-        if evento: ingresso.evento = evento
-        if preco is not None: ingresso.preco = preco
-        if quantidade is not None: ingresso.quantidade_disponivel = quantidade
-        if data: ingresso.data_evento = data
+        if evento: 
+            ingresso.evento = evento
+        if preco is not None: 
+            ingresso.preco = preco
+        if quantidade is not None: 
+            ingresso.quantidade_disponivel = quantidade
+        
+        if data_br:
+            try:
+                data_obj = datetime.strptime(data_br, "%d/%m/%Y %H:%M")
+                ingresso.data_evento = data_obj.strftime("%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                raise Exception("Formato de data inválido! Use: DD/MM/YYYY HH:MM")
         
         return self.ingresso_repo.update(ingresso)
 
