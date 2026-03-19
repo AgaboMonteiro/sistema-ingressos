@@ -49,6 +49,77 @@ class UsuarioRepository(BaseRepository):
         self.db.commit()
         cursor.close()
         return True
+    
+    def find_by_id(self, id: int):
+        """Busca um usuário pelo ID"""
+        cursor = self.db.get_cursor()
+        if not cursor: 
+            return None
+        cursor.execute("SELECT * FROM usuario WHERE id = %s", (id,))
+        row = cursor.fetchone()
+        cursor.close()
+        return Usuario(**row) if row else None
+
+    # --- NOVOS MÉTODOS PARA UPDATE E DELETE ---
+    def buscar_usuario_por_id(self, id_usuario):
+        """Busca um usuário pelo ID"""
+        return self.usuario_repo.find_by_id(id_usuario)
+    
+    def atualizar_usuario(self, id_usuario, nome=None, email=None, senha=None, tipo=None):
+        """Atualiza um usuário existente"""
+        usuario = self.usuario_repo.find_by_id(id_usuario)
+        if not usuario:
+            raise Exception("Usuário não encontrado!")
+        
+        if email and email != usuario.email:
+            if self.usuario_repo.find_by_email(email):
+                raise Exception("Email já cadastrado por outro usuário!")
+        
+        if nome:
+            usuario.nome = nome
+        if email:
+            usuario.email = email
+        if senha:
+            usuario.senha = senha
+        if tipo:
+            usuario.tipo = tipo
+        
+        return self.usuario_repo.update(usuario)
+
+    def deletar_usuario(self, id_usuario):
+        """Deleta um usuário"""
+        usuario = self.usuario_repo.find_by_id(id_usuario)
+        if not usuario:
+            raise Exception("Usuário não encontrado!")
+        return self.usuario_repo.delete(id_usuario)
+
+    def buscar_ingresso_por_id(self, id_ingresso):
+        """Busca um ingresso pelo ID"""
+        return self.ingresso_repo.find_by_id(id_ingresso)
+
+    def atualizar_ingresso(self, id_ingresso, evento=None, preco=None, quantidade=None, data=None):
+        """Atualiza um ingresso existente"""
+        ingresso = self.ingresso_repo.find_by_id(id_ingresso)
+        if not ingresso:
+            raise Exception("Ingresso não encontrado!")
+        
+        if evento:
+            ingresso.evento = evento
+        if preco is not None:
+            ingresso.preco = preco
+        if quantidade is not None:
+            ingresso.quantidade_disponivel = quantidade
+        if data:
+            ingresso.data_evento = data
+        
+        return self.ingresso_repo.update(ingresso)
+
+    def deletar_ingresso(self, id_ingresso):
+        """Deleta um ingresso"""
+        ingresso = self.ingresso_repo.find_by_id(id_ingresso)
+        if not ingresso:
+            raise Exception("Ingresso não encontrado!")
+        return self.ingresso_repo.delete(id_ingresso)
 
 class IngressoRepository(BaseRepository):
     def create(self, ingresso: Ingresso):
@@ -141,3 +212,20 @@ class CompraRepository(BaseRepository):
         results = cursor.fetchall()
         cursor.close()
         return results
+
+    def find_by_usuario_id(self, usuario_id: int):
+        """Busca todas as compras de um usuário"""
+        cursor = self.db.get_cursor()
+        if not cursor: 
+            return []
+        query = """
+            SELECT c.*, i.evento, i.data_evento, i.preco 
+            FROM compra_ingresso c
+            JOIN ingresso i ON c.ingresso_id = i.id
+            WHERE c.usuario_id = %s
+            ORDER BY c.data_compra DESC
+        """
+        cursor.execute(query, (usuario_id,))
+        rows = cursor.fetchall()
+        cursor.close()
+        return rows
