@@ -94,21 +94,36 @@ class IngressoRepository(BaseRepository):
         cursor.close()
         return True
 
+
 class CompraRepository(BaseRepository):
     def create(self, compra: CompraIngresso):
-        cursor = self.db.get_cursor(dictionary=False)
-        if not cursor: return None
-        # Atualizar estoque do ingresso antes da compra
-        query_update_estoque = "UPDATE ingresso SET quantidade_disponivel = quantidade_disponivel - %s WHERE id = %s"
-        cursor.execute(query_update_estoque, (compra.quantidade, compra.ingresso_id))
-        
-        query_compra = "INSERT INTO compra_ingresso (usuario_id, ingresso_id, quantidade, valor_total) VALUES (%s, %s, %s, %s)"
-        cursor.execute(query_compra, (compra.usuario_id, compra.ingresso_id, compra.quantidade, compra.valor_total))
-        
-        self.db.commit()
-        compra.id = cursor.lastrowid
-        cursor.close()
-        return compra
+        conn = self.db.connect()
+        cursor = conn.cursor()
+        try:
+            conn.start_transaction()
+
+            # Proteção de estoque no SQL (Não depende de mudança no model)
+            query_update_estoque = """
+                UPDATE ingresso 
+                SET quantidade_disponivel = quantidade_disponivel - %s 
+                WHERE id = %s AND quantidade_disponivel >= %s
+            """
+            cursor.execute(query_update_estoque, (compra.quantidade, compra.ingresso_id, compra.quantidade))
+
+            if cursor.rowcount == 0:
+                raise Exception("Estoque insuficiente!")
+
+            query_compra = "INSERT INTO compra_ingresso (usuario_id, ingresso_id, quantidade, valor_total) VALUES (%s, %s, %s, %s)"
+            cursor.execute(query_compra, (compra.usuario_id, compra.ingresso_id, compra.quantidade, compra.valor_total))
+
+            conn.commit()
+            compra.id = cursor.lastrowid
+            return compra
+        except Exception as e:
+            conn.rollback()
+            raise e
+        finally:
+            cursor.close()
 
     def get_top_publicos(self):
         cursor = self.db.get_cursor()

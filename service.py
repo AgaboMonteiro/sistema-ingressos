@@ -34,6 +34,13 @@ class SistemaService:
 
     # --- Ingressos ---
     def cadastrar_ingresso(self, evento, preco, quantidade, data):
+        # Validação simples de formato sem converter o objeto
+        if len(data) < 16:  # Ex: "2026-01-01 20:00" tem 16 caracteres
+            raise Exception("Formato de data inválido! Use: YYYY-MM-DD HH:MM")
+
+        if preco < 0 or quantidade < 0:
+            raise Exception("Preço ou Quantidade inválidos!")
+
         novo_ingresso = Ingresso(evento=evento, preco=preco, quantidade_disponivel=quantidade, data_evento=data)
         return self.ingresso_repo.create(novo_ingresso)
 
@@ -42,13 +49,18 @@ class SistemaService:
 
     # --- Compras ---
     def realizar_compra(self, usuario_id, ingresso_id, quantidade):
+        # Validação básica de integridade de entrada
+        if quantidade <= 0:
+            raise Exception("A quantidade deve ser maior que zero!")
+
         ingresso = self.ingresso_repo.find_by_id(ingresso_id)
         if not ingresso:
             raise Exception("Ingresso não encontrado!")
-        
+
+        # O Service faz um check prévio para dar feedback rápido ao usuário
         if ingresso.quantidade_disponivel < quantidade:
             raise Exception(f"Quantidade insuficiente! Disponível: {ingresso.quantidade_disponivel}")
-        
+
         valor_total = float(ingresso.preco) * int(quantidade)
         nova_compra = CompraIngresso(
             usuario_id=usuario_id,
@@ -56,6 +68,7 @@ class SistemaService:
             quantidade=quantidade,
             valor_total=valor_total
         )
+        # O Repository agora é quem garante a integridade final com a transação
         return self.compra_repo.create(nova_compra)
 
     # --- Relatórios ---
