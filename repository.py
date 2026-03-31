@@ -7,12 +7,21 @@ class BaseRepository:
 
 class UsuarioRepository(BaseRepository):
     def create(self, usuario: Usuario):
+        print(f"\n📝 DEBUG CADASTRO:")
+        print(f"Nome: '{usuario.nome}'")
+        print(f"Email: '{usuario.email}'")
+        print(f"Senha: '{usuario.senha}'")
+        print(f"Tipo: '{usuario.tipo}'")
+        
         cursor = self.db.get_cursor(dictionary=False)
         if not cursor: return None
         query = "INSERT INTO usuario (nome, email, senha, tipo) VALUES (%s, %s, %s, %s)"
         cursor.execute(query, (usuario.nome, usuario.email, usuario.senha, usuario.tipo))
         self.db.commit()
         usuario.id = cursor.lastrowid
+        
+        print(f"✅ Usuário inserido com ID: {usuario.id}")
+        
         cursor.close()
         return usuario
 
@@ -25,12 +34,21 @@ class UsuarioRepository(BaseRepository):
         return [Usuario(**row) for row in rows]
 
     def find_by_email(self, email: str):
+        print(f"\n🔍 Buscando usuário com email: '{email}'")
         cursor = self.db.get_cursor()
-        if not cursor: return None
+        if not cursor: 
+            print("❌ Cursor não disponível")
+            return None
         cursor.execute("SELECT * FROM usuario WHERE email = %s", (email,))
         row = cursor.fetchone()
         cursor.close()
-        return Usuario(**row) if row else None
+        
+        if row:
+            print(f"✅ Usuário encontrado: {row}")
+            return Usuario(**row)
+        else:
+            print(f"❌ Nenhum usuário encontrado com email: '{email}'")
+            return None
 
     def find_by_id(self, id: int):
         cursor = self.db.get_cursor()
@@ -71,18 +89,40 @@ class IngressoRepository(BaseRepository):
     def find_all(self):
         cursor = self.db.get_cursor()
         if not cursor: return []
-        cursor.execute("SELECT * FROM ingresso")
+        
+        # Especificar apenas as colunas que existem
+        cursor.execute("SELECT id, evento, preco, quantidade_disponivel, data_evento FROM ingresso")
         rows = cursor.fetchall()
         cursor.close()
-        return [Ingresso(**row) for row in rows]
+        
+        ingressos = []
+        for row in rows:
+            ingresso = Ingresso(
+                id=row['id'],
+                evento=row['evento'],
+                preco=float(row['preco']),
+                quantidade_disponivel=int(row['quantidade_disponivel']),
+                data_evento=row['data_evento']
+            )
+            ingressos.append(ingresso)
+        
+        return ingressos
 
     def find_by_id(self, id: int):
         cursor = self.db.get_cursor()
         if not cursor: return None
-        cursor.execute("SELECT * FROM ingresso WHERE id = %s", (id,))
+        cursor.execute("SELECT id, evento, preco, quantidade_disponivel, data_evento FROM ingresso WHERE id = %s", (id,))
         row = cursor.fetchone()
         cursor.close()
-        return Ingresso(**row) if row else None
+        if row:
+            return Ingresso(
+                id=row['id'],
+                evento=row['evento'],
+                preco=float(row['preco']),
+                quantidade_disponivel=int(row['quantidade_disponivel']),
+                data_evento=row['data_evento']
+            )
+        return None
 
     def update(self, ingresso: Ingresso):
         cursor = self.db.get_cursor(dictionary=False)
@@ -156,7 +196,6 @@ class CompraRepository(BaseRepository):
         cursor.close()
         return rows
 
-    # REMOVIDO O MÉTODO DUPLICADO - APENAS UM MÉTODO get_top_publicos
     def get_top_publicos(self):
         cursor = self.db.get_cursor()
         if not cursor: return []

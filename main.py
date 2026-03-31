@@ -1,3 +1,4 @@
+# main.py
 import sys
 import os
 from service import AuthService, SistemaService
@@ -68,19 +69,35 @@ class InterfaceTerminal:
             print("3. Você tem conexão com a internet.")
             input("\nPressione Enter para voltar...")
 
-    def tela_cadastro_usuario(self):
-        self.limpar_tela()
+    def tela_cadastro_usuario(self):  # ← LINHA 71
+        """Tela de cadastro de usuário"""
+        self.limpar_tela()  # ← ESTA LINHA DEVE ESTAR INDENTADA
         self.exibir_titulo("CADASTRO DE USUÁRIO")
-
-        nome = input("Nome: ")
-        email = input("Email: ")
-        senha = input("Senha: ")
+        
+        print("📋 REGRAS DE CADASTRO:")
+        print("• Nome: mínimo 3 caracteres")
+        print("• Email: formato usuario@dominio.com (ex: joao@email.com)")
+        print("• Senha: mínimo 8 caracteres, com letras maiúsculas, minúsculas e números")
+        print("=" * 40 + "\n")
+        
+        nome = input("Nome: ").strip()
+        email = input("Email: ").strip()
+        senha = input("Senha: ").strip()
 
         try:
             self.sistema_service.cadastrar_usuario(nome, email, senha)
-            input("\nUsuário cadastrado com sucesso! Pressione Enter para voltar...")
+            print("\n✅ Usuário cadastrado com sucesso!")
+            print("\n🔐 Dicas de segurança:")
+            print("• Nunca compartilhe sua senha")
+            print("• Use uma senha diferente para cada serviço")
+            
         except Exception as e:
-            input(f"\nErro: {e}\nPressione Enter para voltar...")
+            print(f"\n❌ {e}")
+            print("\n📌 Exemplos válidos:")
+            print("   Email: joaosilva@email.com")
+            print("   Senha: MinhaSenha123")
+        
+        input("\nPressione Enter para voltar...")
 
     def menu_logado(self):
         while self.auth_service.usuario_logado:
@@ -114,15 +131,15 @@ class InterfaceTerminal:
         elif opcao == '2':
             self.tela_listar_ingressos()
             input("\nPressione Enter para continuar...")
-        elif opcao == '3':                       # NOVO
+        elif opcao == '3':
             self.tela_atualizar_ingresso()
-        elif opcao == '4':                       # NOVO
+        elif opcao == '4':
             self.tela_deletar_ingresso()
         elif opcao == '5':
             self.tela_listar_usuarios()
-        elif opcao == '6':                       # NOVO
+        elif opcao == '6':
             self.tela_atualizar_usuario()
-        elif opcao == '7':                       # NOVO
+        elif opcao == '7':
             self.tela_deletar_usuario()
         elif opcao == '8':
             self.tela_relatorio_publicos()
@@ -137,7 +154,7 @@ class InterfaceTerminal:
         """Menu do cliente com novas opções"""
         print("1. Comprar Ingresso")
         print("2. Listar Eventos Disponíveis")
-        print("3. Meus Ingressos Comprados")  # NOVA OPÇÃO
+        print("3. Meus Ingressos Comprados")
         print("0. Logout")
 
         opcao = input("\nEscolha uma opção: ")
@@ -147,7 +164,7 @@ class InterfaceTerminal:
         elif opcao == '2':
             self.tela_listar_ingressos()
             input("\nPressione Enter para voltar...")
-        elif opcao == '3':  # NOVA OPÇÃO
+        elif opcao == '3':
             self.tela_meus_ingressos()
         elif opcao == '0':
             self.auth_service.logout()
@@ -155,7 +172,6 @@ class InterfaceTerminal:
             input("\nOpção inválida! Pressione Enter...")
 
     def tela_cadastro_ingresso(self):
-
         self.limpar_tela()
         self.exibir_titulo("CADASTRAR EVENTO")
 
@@ -177,22 +193,18 @@ class InterfaceTerminal:
             input(f"\nErro: {e}")
 
     def tela_listar_usuarios(self):
-
         self.limpar_tela()
 
         try:
             usuarios = self.sistema_service.listar_usuarios()
 
             if usuarios:
-
                 data = [[u.id, u.nome, u.email, u.tipo] for u in usuarios]
-
                 print(tabulate(
                     data,
                     headers=["ID", "Nome", "Email", "Tipo"],
                     tablefmt="grid"
                 ))
-
             else:
                 print("Nenhum usuário encontrado.")
 
@@ -202,16 +214,13 @@ class InterfaceTerminal:
         input("\nPressione Enter para voltar...")
 
     def tela_relatorio_publicos(self):
-
         self.limpar_tela()
         self.exibir_titulo("TOP 10 MAIORES PÚBLICOS")
 
         try:
-
             dados = self.sistema_service.obter_maiores_publicos()
 
             if dados:
-
                 if isinstance(dados[0], dict):
                     print(tabulate(dados, headers="keys", tablefmt="grid"))
                 else:
@@ -220,7 +229,6 @@ class InterfaceTerminal:
                         headers=["Evento", "Total Vendido"],
                         tablefmt="grid"
                     ))
-
             else:
                 print("Nenhum dado disponível.")
 
@@ -230,16 +238,13 @@ class InterfaceTerminal:
         input("\nPressione Enter para voltar...")
 
     def tela_relatorio_compradores(self):
-
         self.limpar_tela()
         self.exibir_titulo("TOP 10 MAIORES COMPRADORES")
 
         try:
-
             dados = self.sistema_service.obter_maiores_compradores()
 
             if dados:
-
                 if isinstance(dados[0], dict):
                     print(tabulate(dados, headers="keys", tablefmt="grid"))
                 else:
@@ -248,7 +253,6 @@ class InterfaceTerminal:
                         headers=["Nome", "Total Compras", "Total Gasto (R$)"],
                         tablefmt="grid"
                     ))
-
             else:
                 print("Nenhum dado disponível.")
 
@@ -258,16 +262,13 @@ class InterfaceTerminal:
         input("\nPressione Enter para voltar...")
 
     def tela_listar_ingressos(self):
-
         self.limpar_tela()
         self.exibir_titulo("EVENTOS DISPONÍVEIS")
 
         try:
-
             ingressos = self.sistema_service.listar_ingressos()
 
             if ingressos:
-
                 data = [
                     [i.id, i.evento, f"R$ {float(i.preco):.2f}", i.quantidade_disponivel, i.data_evento]
                     for i in ingressos
@@ -280,7 +281,6 @@ class InterfaceTerminal:
                 ))
 
                 return ingressos
-
             else:
                 print("Nenhum evento disponível.")
 
@@ -290,7 +290,6 @@ class InterfaceTerminal:
         return []
 
     def tela_comprar_ingresso(self):
-
         ingressos = self.tela_listar_ingressos()
 
         if not ingressos:
@@ -298,7 +297,6 @@ class InterfaceTerminal:
             return
 
         try:
-
             id_ingresso = int(input("\nID do Ingresso: "))
             quantidade = int(input("Quantidade: "))
 
@@ -327,12 +325,9 @@ class InterfaceTerminal:
             input("\nPressione Enter para voltar...")
             return
 
-        # AJUSTE 1: Exibir a data no formato BR na tabela
         data_tabela = []
         for i in ingressos:
-            # Tenta formatar se for objeto datetime, se for string apenas exibe
-            data_formatada = i.data_evento.strftime("%d/%m/%Y %H:%M") if hasattr(i.data_evento,
-                                                                                 'strftime') else i.data_evento
+            data_formatada = i.data_evento.strftime("%d/%m/%Y %H:%M") if hasattr(i.data_evento, 'strftime') else i.data_evento
             data_tabela.append([i.id, i.evento, f"R${i.preco:.2f}", i.quantidade_disponivel, data_formatada])
 
         print(tabulate(data_tabela, headers=["ID", "Evento", "Preço", "Qtd", "Data"], tablefmt="grid"))
@@ -346,9 +341,7 @@ class InterfaceTerminal:
                 input("\nPressione Enter para voltar...")
                 return
 
-            # AJUSTE 2: Formatar a data atual para o prompt de edição
-            data_atual_br = ingresso.data_evento.strftime("%d/%m/%Y %H:%M") if hasattr(ingresso.data_evento,
-                                                                                       'strftime') else ingresso.data_evento
+            data_atual_br = ingresso.data_evento.strftime("%d/%m/%Y %H:%M") if hasattr(ingresso.data_evento, 'strftime') else ingresso.data_evento
 
             print(f"\nAtualizando: {ingresso.evento}")
             print("(Deixe em branco para manter o valor atual)")
@@ -369,7 +362,6 @@ class InterfaceTerminal:
                 print("Quantidade inválida! Mantendo valor atual.")
                 nova_qtd = None
 
-            # AJUSTE 3: Dica do input no padrão BR
             nova_data_br = input(f"Nova data [{data_atual_br}]: ").strip()
 
             print("\n" + "=" * 40)
@@ -382,7 +374,6 @@ class InterfaceTerminal:
             confirmar = input("\nConfirmar atualização? (s/n): ").lower()
 
             if confirmar == 's':
-                # AJUSTE 4: Passando nova_data_br para o service (que já sabe converter)
                 self.sistema_service.atualizar_ingresso(
                     id_ingresso,
                     evento=novo_evento if novo_evento else None,
@@ -433,10 +424,9 @@ class InterfaceTerminal:
             
             print("\n⚠️  ATENÇÃO: Esta ação não pode ser desfeita!")
             
-            # CORREÇÃO: Aceitar tanto maiúscula quanto minúscula
             confirmar = input("\nDigite 'DELETAR' para confirmar: ").strip().upper()
             
-            if confirmar == 'DELETAR':  # Agora compara com upper()
+            if confirmar == 'DELETAR':
                 self.sistema_service.deletar_ingresso(id_ingresso)
                 print("\n✅ Ingresso deletado com sucesso!")
             else:
@@ -466,8 +456,7 @@ class InterfaceTerminal:
         try:
             id_usuario = int(input("\nID do usuário que deseja atualizar: "))
             
-            # Proteger admin principal
-            if id_usuario == 1:  # Assumindo que admin é ID 1
+            if id_usuario == 1:
                 print("\n⚠️  O administrador padrão não pode ser alterado por segurança!")
                 input("\nPressione Enter para voltar...")
                 return
@@ -481,12 +470,23 @@ class InterfaceTerminal:
             
             print(f"\nAtualizando: {usuario.nome}")
             print("(Deixe em branco para manter o valor atual)")
+            print("\n📋 REGRAS DE VALIDAÇÃO:")
+            print("• Nome: mínimo 3 caracteres")
+            print("• Email: formato usuario@dominio.com")
+            print("• Senha: mínimo 8 caracteres, com maiúsculas, minúsculas e números\n")
             
             novo_nome = input(f"Novo nome [{usuario.nome}]: ").strip()
-            novo_email = input(f"Novo email [{usuario.email}]: ").strip()
-            nova_senha = input("Nova senha (deixe em branco para não alterar): ").strip()
+            if novo_nome == "":
+                novo_nome = None
             
-            # Opção de alterar tipo
+            novo_email = input(f"Novo email [{usuario.email}]: ").strip()
+            if novo_email == "":
+                novo_email = None
+            
+            nova_senha = input("Nova senha (deixe em branco para não alterar): ").strip()
+            if nova_senha == "":
+                nova_senha = None
+            
             print("\nTipos disponíveis: admin, cliente")
             tipo_atual = usuario.tipo
             novo_tipo_input = input(f"Novo tipo [{tipo_atual}]: ").strip()
@@ -494,23 +494,19 @@ class InterfaceTerminal:
             
             print("\n" + "=" * 40)
             print("RESUMO DA ATUALIZAÇÃO:")
-            if novo_nome:
-                print(f"Nome: {usuario.nome} -> {novo_nome}")
-            if novo_email:
-                print(f"Email: {usuario.email} -> {novo_email}")
-            if nova_senha:
-                print("Senha: [alterada]")
-            if novo_tipo:
-                print(f"Tipo: {usuario.tipo} -> {novo_tipo}")
+            if novo_nome: print(f"Nome: {usuario.nome} -> {novo_nome}")
+            if novo_email: print(f"Email: {usuario.email} -> {novo_email}")
+            if nova_senha: print("Senha: [alterada]")
+            if novo_tipo: print(f"Tipo: {usuario.tipo} -> {novo_tipo}")
             
             confirmar = input("\nConfirmar atualização? (s/n): ").lower()
             
             if confirmar == 's':
                 self.sistema_service.atualizar_usuario(
                     id_usuario,
-                    nome=novo_nome if novo_nome else None,
-                    email=novo_email if novo_email else None,
-                    senha=nova_senha if nova_senha else None,
+                    nome=novo_nome,
+                    email=novo_email,
+                    senha=nova_senha,
                     tipo=novo_tipo
                 )
                 print("\n✅ Usuário atualizado com sucesso!")
@@ -541,14 +537,12 @@ class InterfaceTerminal:
         try:
             id_usuario = int(input("\nID do usuário que deseja deletar: "))
             
-            # Impedir deleção do próprio usuário logado
             if id_usuario == self.auth_service.usuario_logado.id:
                 print("\n❌ Erro: Você não pode deletar seu próprio usuário!")
                 input("\nPressione Enter para voltar...")
                 return
             
-            # Proteger admin principal
-            if id_usuario == 1:  # Assumindo que admin é ID 1
+            if id_usuario == 1:
                 print("\n⚠️  O administrador padrão não pode ser deletado!")
                 input("\nPressione Enter para voltar...")
                 return
@@ -567,10 +561,9 @@ class InterfaceTerminal:
             
             print("\n⚠️  ATENÇÃO: Todas as compras deste usuário também serão deletadas!")
             
-            # CORREÇÃO: Aceitar tanto maiúscula quanto minúscula
             confirmar = input("\nDigite 'DELETAR' para confirmar: ").strip().upper()
             
-            if confirmar == 'DELETAR':  # Agora compara com upper()
+            if confirmar == 'DELETAR':
                 self.sistema_service.deletar_usuario(id_usuario)
                 print("\n✅ Usuário deletado com sucesso!")
             else:
@@ -596,20 +589,15 @@ class InterfaceTerminal:
                 print("📭 Você ainda não comprou nenhum ingresso.")
                 print("\nQue tal conferir os eventos disponíveis? (opção 2)")
             else:
-                # Preparar dados para tabela
                 data = []
-                total_gasto = 0  # Inicializar total_gasto
+                total_gasto = 0
                 
                 for compra in compras:
-                    # Formatar data de compra
                     data_compra = compra['data_compra'].strftime("%d/%m/%Y %H:%M") if hasattr(compra['data_compra'], 'strftime') else compra['data_compra']
-                    
-                    # Formatar data do evento
                     data_evento = compra['data_evento'].strftime("%d/%m/%Y %H:%M") if hasattr(compra['data_evento'], 'strftime') else compra['data_evento']
                     
-                    # Valor da compra
                     valor_compra = float(compra['valor_total'])
-                    total_gasto += valor_compra  # Somar ao total
+                    total_gasto += valor_compra
                     
                     data.append([
                         compra['id'],
@@ -626,7 +614,6 @@ class InterfaceTerminal:
                     tablefmt="grid"
                 ))
                 
-                # Mostrar resumo
                 total_compras = len(compras)
                 total_ingressos = sum(c['quantidade'] for c in compras)
                 
@@ -640,11 +627,11 @@ class InterfaceTerminal:
         except Exception as e:
             print(f"\nErro ao buscar seus ingressos: {e}")
             import traceback
-            traceback.print_exc()  # Isso vai mostrar o erro detalhado
+            traceback.print_exc()
         
         input("\nPressione Enter para voltar...")
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     app = InterfaceTerminal()
     app.menu_principal()
