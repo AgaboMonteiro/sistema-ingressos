@@ -112,7 +112,6 @@ class CompraRepository(BaseRepository):
         try:
             conn.start_transaction()
 
-            # ... (mantenha a lógica do update_estoque que já fizemos)
             query_update_estoque = """
                 UPDATE ingresso 
                 SET quantidade_disponivel = quantidade_disponivel - %s 
@@ -123,7 +122,6 @@ class CompraRepository(BaseRepository):
             if cursor.rowcount == 0:
                 raise Exception("Estoque insuficiente!")
 
-            # ALTERAÇÃO AQUI: Adicionamos data_compra na Query e no execute
             query_compra = """
                 INSERT INTO compra_ingresso (usuario_id, ingresso_id, quantidade, valor_total, data_compra) 
                 VALUES (%s, %s, %s, %s, %s)
@@ -133,7 +131,7 @@ class CompraRepository(BaseRepository):
                 compra.ingresso_id,
                 compra.quantidade,
                 compra.valor_total,
-                compra.data_compra  # O Python enviará o horário do seu computador
+                compra.data_compra
             ))
 
             conn.commit()
@@ -145,6 +143,20 @@ class CompraRepository(BaseRepository):
         finally:
             cursor.close()
 
+    def find_by_usuario_id(self, usuario_id: int):
+        cursor = self.db.get_cursor()
+        if not cursor: return []
+        query = """
+            SELECT c.*, i.evento, i.data_evento FROM compra_ingresso c
+            JOIN ingresso i ON c.ingresso_id = i.id
+            WHERE c.usuario_id = %s ORDER BY c.data_compra DESC
+        """
+        cursor.execute(query, (usuario_id,))
+        rows = cursor.fetchall()
+        cursor.close()
+        return rows
+
+    # REMOVIDO O MÉTODO DUPLICADO - APENAS UM MÉTODO get_top_publicos
     def get_top_publicos(self):
         cursor = self.db.get_cursor()
         if not cursor: return []
@@ -176,34 +188,3 @@ class CompraRepository(BaseRepository):
         results = cursor.fetchall()
         cursor.close()
         return results
-
-    def find_by_usuario_id(self, usuario_id: int):
-        cursor = self.db.get_cursor()
-        if not cursor: return []
-        query = """
-            SELECT c.*, i.evento, i.data_evento FROM compra_ingresso c
-            JOIN ingresso i ON c.ingresso_id = i.id
-            WHERE c.usuario_id = %s ORDER BY c.data_compra DESC
-        """
-        cursor.execute(query, (usuario_id,))
-        rows = cursor.fetchall()
-        cursor.close()
-        return rows
-
-    def get_top_publicos(self):
-        cursor = self.db.get_cursor()
-        if not cursor: return []
-        query = "SELECT i.evento, SUM(c.quantidade) as total_vendido FROM ingresso i JOIN compra_ingresso c ON i.id = c.ingresso_id GROUP BY i.id ORDER BY total_vendido DESC LIMIT 10"
-        cursor.execute(query)
-        res = cursor.fetchall()
-        cursor.close()
-        return res
-
-    def get_top_compradores(self):
-        cursor = self.db.get_cursor()
-        if not cursor: return []
-        query = "SELECT u.nome, COUNT(c.id) as total_compras, SUM(c.valor_total) as total_gasto FROM usuario u JOIN compra_ingresso c ON u.id = c.usuario_id GROUP BY u.id ORDER BY total_gasto DESC LIMIT 10"
-        cursor.execute(query)
-        res = cursor.fetchall()
-        cursor.close()
-        return res

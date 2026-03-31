@@ -1,3 +1,4 @@
+
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional
@@ -8,7 +9,7 @@ class Usuario:
     nome: str = ""
     email: str = ""
     senha: str = ""
-    tipo: str = "cliente" # 'admin' ou 'cliente'
+    tipo: str = "cliente"
 
 @dataclass
 class Ingresso:
@@ -16,6 +17,7 @@ class Ingresso:
     evento: str = ""
     preco: float = 0.0
     quantidade_disponivel: int = 0
+    quantidade_total: int = 0  # ADICIONADO - se existir no banco
     data_evento: str = ""
 
 @dataclass
