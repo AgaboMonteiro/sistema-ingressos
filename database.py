@@ -14,7 +14,6 @@ class Database:
     def connect(self):
         try:
             if self.connection is None or not self.connection.is_connected():
-                # Conexão corrigida: Removido ssl_mode (causador do erro)
                 # Adicionado ssl_ca para validação segura com Aiven
                 self.connection = mysql.connector.connect(
                     host=DB_CONFIG['host'],
@@ -53,6 +52,7 @@ class Database:
                 evento VARCHAR(150) NOT NULL,
                 preco DECIMAL(10, 2) NOT NULL,
                 quantidade_disponivel INT NOT NULL,
+                quantidade_total INT NOT NULL,
                 data_evento DATETIME NOT NULL
             )
         """)

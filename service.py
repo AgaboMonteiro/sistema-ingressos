@@ -1,6 +1,7 @@
 from repository import UsuarioRepository, IngressoRepository, CompraRepository
 from models import Usuario, Ingresso, CompraIngresso
 from datetime import datetime
+
 class AuthService:
     
     def __init__(self):
@@ -116,17 +117,40 @@ class SistemaService:
         return self.ingresso_repo.delete(id_ingresso)
 
     # --- COMPRAS ---
+
     def realizar_compra(self, usuario_id, ingresso_id, quantidade):
-        # Restaurada sua lógica de proteção
-        if quantidade <= 0: raise Exception("A quantidade deve ser maior que zero!")
-        
+
+        if quantidade <= 0:
+            raise Exception("A quantidade deve ser maior que zero!")
+
         ingresso = self.ingresso_repo.find_by_id(ingresso_id)
-        if not ingresso: raise Exception("Ingresso não encontrado!")
+
+        if not ingresso:
+            raise Exception("Ingresso não encontrado!")
+
+        # 🔥 NOVA VALIDAÇÃO (AQUI)
+        # Converter data se vier como string
+        if isinstance(ingresso.data_evento, str):
+            data_evento = datetime.strptime(ingresso.data_evento, "%Y-%m-%d %H:%M:%S")
+        else:
+            data_evento = ingresso.data_evento
+
+        if data_evento < datetime.now():
+            raise Exception("Não é possível comprar ingresso para evento já realizado!")
+
+        # valida estoque
         if ingresso.quantidade_disponivel < quantidade:
             raise Exception(f"Quantidade insuficiente! Disponível: {ingresso.quantidade_disponivel}")
-        
+
         valor_total = float(ingresso.preco) * int(quantidade)
-        nova_compra = CompraIngresso(usuario_id=usuario_id, ingresso_id=ingresso_id, quantidade=quantidade, valor_total=valor_total)
+
+        nova_compra = CompraIngresso(
+            usuario_id=usuario_id,
+            ingresso_id=ingresso_id,
+            quantidade=quantidade,
+            valor_total=valor_total
+        )
+
         return self.compra_repo.create(nova_compra)
 
     def buscar_compras_por_usuario(self, usuario_id):

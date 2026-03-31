@@ -1,6 +1,8 @@
 import sys
 import os
 from service import AuthService, SistemaService
+import re
+from datetime import datetime
 
 # Importar tabulate de forma segura
 try:
@@ -68,19 +70,36 @@ class InterfaceTerminal:
             print("3. Você tem conexão com a internet.")
             input("\nPressione Enter para voltar...")
 
+    
     def tela_cadastro_usuario(self):
         self.limpar_tela()
         self.exibir_titulo("CADASTRO DE USUÁRIO")
 
-        nome = input("Nome: ")
-        email = input("Email: ")
-        senha = input("Senha: ")
+        nome = input("Nome: ").strip()
+        email = input("Email: ").strip()
+        senha = input("Senha: ").strip()
+
+        # ❌ nome vazio
+        if not nome:
+            input("\nErro: Nome não pode ser vazio!")
+            return
+
+        # ❌ email inválido
+        regex_email = r"^[\w\.-]+@[\w\.-]+\.\w+$"
+        if not re.match(regex_email, email):
+            input("\nErro: Email inválido!")
+            return
+
+        # ❌ senha fraca
+        if len(senha) < 4:
+            input("\nErro: Senha deve ter pelo menos 4 caracteres!")
+            return
 
         try:
             self.sistema_service.cadastrar_usuario(nome, email, senha)
-            input("\nUsuário cadastrado com sucesso! Pressione Enter para voltar...")
+            input("\nUsuário cadastrado com sucesso!")
         except Exception as e:
-            input(f"\nErro: {e}\nPressione Enter para voltar...")
+            input(f"\nErro: {e}")
 
     def menu_logado(self):
         while self.auth_service.usuario_logado:
@@ -155,24 +174,45 @@ class InterfaceTerminal:
             input("\nOpção inválida! Pressione Enter...")
 
     def tela_cadastro_ingresso(self):
-
         self.limpar_tela()
         self.exibir_titulo("CADASTRAR EVENTO")
 
-        evento = input("Nome do Evento: ")
+        evento = input("Nome do Evento: ").strip()
+
+        if not evento:
+            input("\nErro: Nome do evento não pode ser vazio!")
+            return
 
         try:
             preco = float(input("Preço: "))
             quantidade = int(input("Quantidade: "))
-            data = input("Data (DD/MM/YYYY HH:MM): ")
+            data_str = input("Data (DD/MM/YYYY HH:MM): ")
 
-            self.sistema_service.cadastrar_ingresso(evento, preco, quantidade, data)
+            data_obj = datetime.strptime(data_str, "%d/%m/%Y %H:%M")
 
-            input("\nEvento cadastrado! Pressione Enter...")
+            if data_obj < datetime.now():
+                input("\nErro: Não é permitido cadastrar eventos no passado!")
+                return
+            
+            if preco <= 0:
+                input("\nErro: Preço deve ser maior que zero!")
+                return
+
+            if quantidade <= 0:
+                input("\nErro: Quantidade deve ser maior que zero!")
+                return
+
+            self.sistema_service.cadastrar_ingresso(
+                evento,
+                preco,
+                quantidade,
+                data_str 
+            )
+
+            input("\nEvento cadastrado!")
 
         except ValueError:
-            input("\nErro: Preço ou Quantidade devem ser números! Pressione Enter...")
-
+            input("\nErro: Dados inválidos!")
         except Exception as e:
             input(f"\nErro: {e}")
 
@@ -268,14 +308,41 @@ class InterfaceTerminal:
 
             if ingressos:
 
-                data = [
-                    [i.id, i.evento, f"R$ {float(i.preco):.2f}", i.quantidade_disponivel, i.data_evento]
-                    for i in ingressos
-                ]
+                data = []
+
+                for i in ingressos:
+                        # calcular vendidos
+                    vendidos = (i.quantidade_total or 0) - i.quantidade_disponivel
+
+                    # evitar divisão por zero
+                    if i.quantidade_total and i.quantidade_total > 0:
+                        porcentagem = (vendidos / i.quantidade_total) * 100
+                    else:
+                        porcentagem = 0
+
+                    # barra visual (opcional 🔥)
+                    barra = "█" * int(porcentagem // 10)
+
+
+                    if porcentagem >= 90:
+                        status = "🔥 ESGOTANDO!"
+                    elif porcentagem >= 70:
+                        status = "⚠️ Últimos ingressos"
+                    else:
+                        status = ""
+
+                    data.append([
+                        i.id,
+                        i.evento,
+                        f"R$ {float(i.preco):.2f}",
+                        i.quantidade_disponivel,
+                        f"{barra} {porcentagem:.0f}% {status}",
+                        i.data_evento
+                    ])
 
                 print(tabulate(
                     data,
-                    headers=["ID", "Evento", "Preço", "Qtd", "Data"],
+                    headers=["ID", "Evento", "Preço", "Qtd", "Vendas", "Data"],
                     tablefmt="grid"
                 ))
 

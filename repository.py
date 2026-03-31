@@ -61,8 +61,8 @@ class IngressoRepository(BaseRepository):
     def create(self, ingresso: Ingresso):
         cursor = self.db.get_cursor(dictionary=False)
         if not cursor: return None
-        query = "INSERT INTO ingresso (evento, preco, quantidade_disponivel, data_evento) VALUES (%s, %s, %s, %s)"
-        cursor.execute(query, (ingresso.evento, ingresso.preco, ingresso.quantidade_disponivel, ingresso.data_evento))
+        query = "INSERT INTO ingresso (evento, preco, quantidade_disponivel, quantidade_total, data_evento) VALUES (%s, %s, %s, %s)"
+        cursor.execute(query, (ingresso.evento, ingresso.preco, ingresso.quantidade_disponivel, ingresso.quantidade_disponivel, ingresso.data_evento))
         self.db.commit()
         ingresso.id = cursor.lastrowid
         cursor.close()
@@ -71,7 +71,7 @@ class IngressoRepository(BaseRepository):
     def find_all(self):
         cursor = self.db.get_cursor()
         if not cursor: return []
-        cursor.execute("SELECT * FROM ingresso")
+        cursor.execute("SELECT * FROM ingresso ORDER BY data_evento ASC")
         rows = cursor.fetchall()
         cursor.close()
         return [Ingresso(**row) for row in rows]

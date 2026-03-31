@@ -16,6 +16,7 @@ class Ingresso:
     evento: str = ""
     preco: float = 0.0
     quantidade_disponivel: int = 0
+    quantidade_total: Optional[int] = None  # 👈 ADICIONE ISSO
     data_evento: str = ""
 
 @dataclass
