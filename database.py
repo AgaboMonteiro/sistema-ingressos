@@ -1,3 +1,4 @@
+# database.py
 import mysql.connector
 from mysql.connector import Error
 from config import DB_CONFIG
@@ -14,46 +15,48 @@ class Database:
     def connect(self):
         try:
             if self.connection is None or not self.connection.is_connected():
-                # Conexão corrigida: Removido ssl_mode (causador do erro)
-                # Adicionado ssl_ca para validação segura com Aiven
                 self.connection = mysql.connector.connect(
                     host=DB_CONFIG['host'],
                     port=DB_CONFIG['port'],
                     user=DB_CONFIG['user'],
                     password=DB_CONFIG['password'],
                     database=DB_CONFIG['database'],
-                    ssl_ca=DB_CONFIG.get('ssl_ca'), # O caminho para o ca.pem
-                    ssl_disabled=False, # Garante que SSL esteja habilitado
-                    autocommit = True
+                    ssl_ca=DB_CONFIG.get('ssl_ca'),
+                    ssl_disabled=False,
+                    autocommit=True
                 )
                 self.create_tables()
             return self.connection
         except Error as e:
             raise Exception(f"Erro ao conectar ao banco de dados: {e}")
 
-    def create_tables(self):
+    def create_tables(self):  # ← CORRIGIDO: indentação correta
         if not self.connection: return
         cursor = self.connection.cursor()
         
-        # Tabela Usuario
+        # Tabela Usuario - MODIFICADA
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS usuario (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 nome VARCHAR(100) NOT NULL,
                 email VARCHAR(100) UNIQUE NOT NULL,
                 senha VARCHAR(100) NOT NULL,
-                tipo ENUM('admin', 'cliente') DEFAULT 'cliente'
+                tipo ENUM('super_admin', 'organizador', 'cliente') DEFAULT 'cliente',
+                organizador_id INT NULL,
+                FOREIGN KEY (organizador_id) REFERENCES usuario(id) ON DELETE SET NULL
             )
         """)
 
-        # Tabela Ingresso
+        # Tabela Ingresso - MODIFICADA
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS ingresso (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 evento VARCHAR(150) NOT NULL,
                 preco DECIMAL(10, 2) NOT NULL,
                 quantidade_disponivel INT NOT NULL,
-                data_evento DATETIME NOT NULL
+                data_evento DATETIME NOT NULL,
+                organizador_id INT NOT NULL,
+                FOREIGN KEY (organizador_id) REFERENCES usuario(id) ON DELETE CASCADE
             )
         """)
 
@@ -71,11 +74,13 @@ class Database:
             )
         """)
         
-        # Inserir um admin padrão se não existir nenhum usuário
-        cursor.execute("SELECT COUNT(*) FROM usuario")
+        # Inserir SUPER_ADMIN padrão
+        cursor.execute("SELECT COUNT(*) FROM usuario WHERE tipo = 'super_admin'")
         if cursor.fetchone()[0] == 0:
-            cursor.execute("INSERT INTO usuario (nome, email, senha, tipo) VALUES (%s, %s, %s, %s)", 
-                          ('Administrador', 'admin@sistema.com', 'admin123', 'admin'))
+            cursor.execute("""
+                INSERT INTO usuario (nome, email, senha, tipo) 
+                VALUES (%s, %s, %s, %s)
+            """, ('Super Administrador', 'admin@sistema.com', 'admin123', 'super_admin'))
             self.connection.commit()
 
         cursor.close()

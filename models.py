@@ -9,7 +9,8 @@ class Usuario:
     nome: str = ""
     email: str = ""
     senha: str = ""
-    tipo: str = "cliente"
+    tipo: str = "cliente"  # 'super_admin', 'organizador', 'cliente'
+    organizador_id: Optional[int] = None  # Para organizadores, referencia o próprio ID
 
 @dataclass
 class Ingresso:
@@ -18,6 +19,7 @@ class Ingresso:
     preco: float = 0.0
     quantidade_disponivel: int = 0
     data_evento: str = ""
+    organizador_id: int = 0  # Quem criou o evento
 
 @dataclass
 class CompraIngresso:

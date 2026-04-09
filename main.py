@@ -1,9 +1,9 @@
-# main.py
+# main.py - CÓDIGO COMPLETO CORRIGIDO
 import sys
 import os
+from datetime import datetime
 from service import AuthService, SistemaService
 
-# Importar tabulate de forma segura
 try:
     from tabulate import tabulate
 except ImportError:
@@ -15,6 +15,7 @@ class InterfaceTerminal:
     def __init__(self):
         self.auth_service = AuthService()
         self.sistema_service = SistemaService()
+        self.sistema_service.auth_service = self.auth_service
 
     def limpar_tela(self):
         os.system('cls' if os.name == 'nt' else 'clear')
@@ -28,9 +29,12 @@ class InterfaceTerminal:
         while True:
             self.limpar_tela()
             self.exibir_titulo("SISTEMA DE INGRESSOS")
+            
+            print("💡 DICA: Use Ctrl + Scroll do mouse para ZOOM na tela do terminal!\n")
 
             print("1. Login")
-            print("2. Cadastrar Novo Usuário")
+            print("2. Cadastrar como Cliente")
+            print("3. Cadastrar como Organizador")
             print("0. Sair")
 
             opcao = input("\nEscolha uma opção: ")
@@ -38,7 +42,9 @@ class InterfaceTerminal:
             if opcao == '1':
                 self.tela_login()
             elif opcao == '2':
-                self.tela_cadastro_usuario()
+                self.tela_cadastro_usuario('cliente')
+            elif opcao == '3':
+                self.tela_cadastro_usuario('organizador')
             elif opcao == '0':
                 print("\nSaindo... Até logo!")
                 sys.exit()
@@ -48,31 +54,23 @@ class InterfaceTerminal:
     def tela_login(self):
         self.limpar_tela()
         self.exibir_titulo("LOGIN")
-
         email = input("Email: ")
         senha = input("Senha: ")
-
         try:
             if self.auth_service.login(email, senha):
                 self.menu_logado()
             else:
                 input("\nCredenciais inválidas! Pressione Enter para tentar novamente...")
-
         except Exception as e:
-            print("\n" + "!" * 40)
-            print("ERRO DE CONEXÃO COM O BANCO AIVEN")
-            print("!" * 40)
-            print(f"Detalhe do Erro: {e}")
-            print("\nVerifique se:")
-            print("1. Sua senha está correta no arquivo 'config.py'.")
-            print("2. Seu IP está liberado no painel do Aiven.")
-            print("3. Você tem conexão com a internet.")
+            print(f"\nErro: {e}")
             input("\nPressione Enter para voltar...")
 
-    def tela_cadastro_usuario(self):  # ← LINHA 71
-        """Tela de cadastro de usuário"""
-        self.limpar_tela()  # ← ESTA LINHA DEVE ESTAR INDENTADA
-        self.exibir_titulo("CADASTRO DE USUÁRIO")
+    def tela_cadastro_usuario(self, tipo='cliente'):
+        """Tela de cadastro de usuário - cliente ou organizador"""
+        self.limpar_tela()
+        
+        tipo_nome = "ORGANIZADOR" if tipo == 'organizador' else "CLIENTE"
+        self.exibir_titulo(f"CADASTRO DE {tipo_nome}")
         
         print("📋 REGRAS DE CADASTRO:")
         print("• Nome: mínimo 3 caracteres")
@@ -83,552 +81,366 @@ class InterfaceTerminal:
         nome = input("Nome: ").strip()
         email = input("Email: ").strip()
         senha = input("Senha: ").strip()
+        
+        print(f"\n📌 Você está se cadastrando como {tipo_nome}!")
+        if tipo == 'organizador':
+            print("   Após o cadastro, você poderá criar e gerenciar seus próprios eventos.")
+        else:
+            print("   Após o cadastro, você poderá comprar ingressos para os eventos.")
+        
+        confirmar = input("\nConfirmar cadastro? (s/n): ").lower()
+        
+        if confirmar != 's':
+            print("\nOperação cancelada.")
+            input("\nPressione Enter para voltar...")
+            return
 
         try:
-            self.sistema_service.cadastrar_usuario(nome, email, senha)
-            print("\n✅ Usuário cadastrado com sucesso!")
-            print("\n🔐 Dicas de segurança:")
-            print("• Nunca compartilhe sua senha")
-            print("• Use uma senha diferente para cada serviço")
+            self.sistema_service.cadastrar_usuario(nome, email, senha, tipo=tipo)
+            print(f"\n✅ {tipo_nome} cadastrado com sucesso!")
             
         except Exception as e:
             print(f"\n❌ {e}")
-            print("\n📌 Exemplos válidos:")
-            print("   Email: joaosilva@email.com")
-            print("   Senha: MinhaSenha123")
         
         input("\nPressione Enter para voltar...")
 
     def menu_logado(self):
         while self.auth_service.usuario_logado:
             usuario = self.auth_service.usuario_logado
-
             self.limpar_tela()
             self.exibir_titulo(f"BEM-VINDO, {usuario.nome.upper()}")
-
-            if usuario.tipo == 'admin':
-                self.menu_admin()
-            else:
-                self.menu_cliente()
-
-    def menu_admin(self):
-        """Menu do administrador com todas as opções"""
-        print("1. Cadastrar Ingresso")
-        print("2. Listar Ingressos")
-        print("3. Atualizar Ingresso")
-        print("4. Deletar Ingresso")
-        print("5. Listar Usuários")
-        print("6. Atualizar Usuário")
-        print("7. Deletar Usuário")
-        print("8. Relatório: Maiores Públicos (Top 10)")
-        print("9. Relatório: Maiores Compradores (Top 10)")
-        print("0. Logout")
-
-        opcao = input("\nEscolha uma opção: ")
-
-        if opcao == '1':
-            self.tela_cadastro_ingresso()
-        elif opcao == '2':
-            self.tela_listar_ingressos()
-            input("\nPressione Enter para continuar...")
-        elif opcao == '3':
-            self.tela_atualizar_ingresso()
-        elif opcao == '4':
-            self.tela_deletar_ingresso()
-        elif opcao == '5':
-            self.tela_listar_usuarios()
-        elif opcao == '6':
-            self.tela_atualizar_usuario()
-        elif opcao == '7':
-            self.tela_deletar_usuario()
-        elif opcao == '8':
-            self.tela_relatorio_publicos()
-        elif opcao == '9':
-            self.tela_relatorio_compradores()
-        elif opcao == '0':
-            self.auth_service.logout()
-        else:
-            input("\nOpção inválida! Pressione Enter...")
-
-    def menu_cliente(self):
-        """Menu do cliente com novas opções"""
-        print("1. Comprar Ingresso")
-        print("2. Listar Eventos Disponíveis")
-        print("3. Meus Ingressos Comprados")
-        print("0. Logout")
-
-        opcao = input("\nEscolha uma opção: ")
-
-        if opcao == '1':
-            self.tela_comprar_ingresso()
-        elif opcao == '2':
-            self.tela_listar_ingressos()
-            input("\nPressione Enter para voltar...")
-        elif opcao == '3':
-            self.tela_meus_ingressos()
-        elif opcao == '0':
-            self.auth_service.logout()
-        else:
-            input("\nOpção inválida! Pressione Enter...")
+            
+            print("💡 DICA: Use Ctrl + Scroll do mouse para ZOOM na tela do terminal!\n")
+            
+            if usuario.tipo == 'super_admin':
+                print("👑 SUPER ADMINISTRADOR 👑")
+                print("-" * 40)
+                print("1. Listar Usuários")
+                print("2. Criar Organizador")
+                print("3. Atualizar Usuário")
+                print("4. Deletar Usuário")
+                print("5. Cadastrar Evento")
+                print("6. Listar Todos Eventos")
+                print("7. Relatório: Mais Vendidos")
+                print("0. Logout")
+                
+                opcao = input("\nEscolha uma opção: ")
+                
+                if opcao == '0':
+                    self.auth_service.logout()
+                elif opcao == '1':
+                    self.tela_listar_usuarios()
+                elif opcao == '2':
+                    self.tela_criar_organizador()
+                elif opcao == '3':
+                    self.tela_atualizar_usuario()
+                elif opcao == '4':
+                    self.tela_deletar_usuario()
+                elif opcao == '5':
+                    self.tela_cadastro_ingresso()
+                elif opcao == '6':
+                    self.tela_listar_ingressos()
+                    input("\nPressione Enter para voltar...")
+                elif opcao == '7':
+                    self.tela_mais_vendidos()
+                else:
+                    input("\nOpção inválida! Pressione Enter...")
+                    
+            elif usuario.tipo == 'organizador':
+                print("🎫 ORGANIZADOR 🎫")
+                print("-" * 40)
+                print("1. Cadastrar Evento")
+                print("2. Meus Eventos")
+                print("0. Logout")
+                
+                opcao = input("\nEscolha uma opção: ")
+                
+                if opcao == '0':
+                    self.auth_service.logout()
+                elif opcao == '1':
+                    self.tela_cadastro_ingresso()
+                elif opcao == '2':
+                    self.tela_listar_ingressos()
+                    input("\nPressione Enter para voltar...")
+                else:
+                    input("\nOpção inválida! Pressione Enter...")
+                    
+            else:  # cliente
+                print("🎟️ CLIENTE 🎟️")
+                print("-" * 40)
+                print("1. Comprar Ingresso")
+                print("2. Listar Eventos Disponíveis")
+                print("3. Meus Ingressos Comprados")
+                print("4. Eventos Mais Vendidos")
+                print("0. Logout")
+                
+                opcao = input("\nEscolha uma opção: ")
+                
+                if opcao == '0':
+                    self.auth_service.logout()
+                elif opcao == '1':
+                    self.tela_comprar_ingresso()
+                elif opcao == '2':
+                    self.tela_listar_ingressos()
+                    input("\nPressione Enter para voltar...")
+                elif opcao == '3':
+                    self.tela_meus_ingressos()
+                elif opcao == '4':
+                    self.tela_mais_vendidos()
+                else:
+                    input("\nOpção inválida! Pressione Enter...")
 
     def tela_cadastro_ingresso(self):
+        """Tela para cadastrar um novo ingresso/evento"""
         self.limpar_tela()
         self.exibir_titulo("CADASTRAR EVENTO")
-
-        evento = input("Nome do Evento: ")
-
+        
+        print("📋 DADOS DO EVENTO:\n")
+        
+        evento = input("Nome do Evento: ").strip()
+        
         try:
-            preco = float(input("Preço: "))
-            quantidade = int(input("Quantidade: "))
-            data = input("Data (DD/MM/YYYY HH:MM): ")
-
-            self.sistema_service.cadastrar_ingresso(evento, preco, quantidade, data)
-
-            input("\nEvento cadastrado! Pressione Enter...")
-
+            preco = float(input("Preço (R$): "))
+            quantidade = int(input("Quantidade de ingressos: "))
+            
+            print("\n📅 DATA DO EVENTO:")
+            print("   Exemplo: 25/12/2024")
+            
+            while True:
+                data_str = input("   Data (DD/MM/AAAA): ").strip()
+                try:
+                    data_obj = datetime.strptime(data_str, "%d/%m/%Y")
+                    if data_obj.date() < datetime.now().date():
+                        print("   ❌ A data não pode ser no passado! Escolha uma data futura.\n")
+                        continue
+                    break
+                except ValueError:
+                    print("   ❌ Data inválida! Use o formato DD/MM/AAAA (ex: 25/12/2024)\n")
+            
+            print("\n⏰ HORA DO EVENTO:")
+            print("   Exemplo: 19:30")
+            
+            while True:
+                hora_str = input("   Hora (HH:MM): ").strip()
+                try:
+                    datetime.strptime(hora_str, "%H:%M")
+                    break
+                except ValueError:
+                    print("   ❌ Hora inválida! Use o formato HH:MM (ex: 19:30)\n")
+            
+            data_hora_str = f"{data_str} {hora_str}"
+            data_hora_obj = datetime.strptime(data_hora_str, "%d/%m/%Y %H:%M")
+            
+            if data_hora_obj < datetime.now():
+                print("\n⚠️  ATENÇÃO: Esta data e hora já passaram!")
+                confirmar = input("Deseja continuar mesmo assim? (s/n): ").lower()
+                if confirmar != 's':
+                    print("\nOperação cancelada.")
+                    input("\nPressione Enter para voltar...")
+                    return
+            
+            print(f"\n📅 Data e hora do evento: {data_hora_str}")
+            
+            confirmar = input("\nConfirmar cadastro? (s/n): ").lower()
+            
+            if confirmar == 's':
+                self.sistema_service.cadastrar_ingresso(evento, preco, quantidade, data_hora_str)
+                print(f"\n✅ Evento cadastrado com sucesso!")
+            else:
+                print("\nOperação cancelada.")
+            
         except ValueError:
-            input("\nErro: Preço ou Quantidade devem ser números! Pressione Enter...")
-
+            print("\n❌ Erro: Preço e quantidade devem ser números!")
         except Exception as e:
-            input(f"\nErro: {e}")
-
-    def tela_listar_usuarios(self):
-        self.limpar_tela()
-
-        try:
-            usuarios = self.sistema_service.listar_usuarios()
-
-            if usuarios:
-                data = [[u.id, u.nome, u.email, u.tipo] for u in usuarios]
-                print(tabulate(
-                    data,
-                    headers=["ID", "Nome", "Email", "Tipo"],
-                    tablefmt="grid"
-                ))
-            else:
-                print("Nenhum usuário encontrado.")
-
-        except Exception as e:
-            print(f"Erro ao listar usuários: {e}")
-
-        input("\nPressione Enter para voltar...")
-
-    def tela_relatorio_publicos(self):
-        self.limpar_tela()
-        self.exibir_titulo("TOP 10 MAIORES PÚBLICOS")
-
-        try:
-            dados = self.sistema_service.obter_maiores_publicos()
-
-            if dados:
-                if isinstance(dados[0], dict):
-                    print(tabulate(dados, headers="keys", tablefmt="grid"))
-                else:
-                    print(tabulate(
-                        dados,
-                        headers=["Evento", "Total Vendido"],
-                        tablefmt="grid"
-                    ))
-            else:
-                print("Nenhum dado disponível.")
-
-        except Exception as e:
-            print(f"Erro ao gerar relatório: {e}")
-
-        input("\nPressione Enter para voltar...")
-
-    def tela_relatorio_compradores(self):
-        self.limpar_tela()
-        self.exibir_titulo("TOP 10 MAIORES COMPRADORES")
-
-        try:
-            dados = self.sistema_service.obter_maiores_compradores()
-
-            if dados:
-                if isinstance(dados[0], dict):
-                    print(tabulate(dados, headers="keys", tablefmt="grid"))
-                else:
-                    print(tabulate(
-                        dados,
-                        headers=["Nome", "Total Compras", "Total Gasto (R$)"],
-                        tablefmt="grid"
-                    ))
-            else:
-                print("Nenhum dado disponível.")
-
-        except Exception as e:
-            print(f"Erro ao gerar relatório: {e}")
-
+            print(f"\n❌ {e}")
+        
         input("\nPressione Enter para voltar...")
 
     def tela_listar_ingressos(self):
         self.limpar_tela()
         self.exibir_titulo("EVENTOS DISPONÍVEIS")
-
-        try:
-            ingressos = self.sistema_service.listar_ingressos()
-
-            if ingressos:
-                data = [
-                    [i.id, i.evento, f"R$ {float(i.preco):.2f}", i.quantidade_disponivel, i.data_evento]
-                    for i in ingressos
-                ]
-
-                print(tabulate(
-                    data,
-                    headers=["ID", "Evento", "Preço", "Qtd", "Data"],
-                    tablefmt="grid"
-                ))
-
-                return ingressos
-            else:
-                print("Nenhum evento disponível.")
-
-        except Exception as e:
-            print(f"Erro ao listar eventos: {e}")
-
-        return []
+        
+        ingressos = self.sistema_service.listar_ingressos()
+        if ingressos:
+            data = [[i.id, i.evento, f"R${i.preco:.2f}", i.quantidade_disponivel, i.data_evento] for i in ingressos]
+            print(tabulate(data, headers=["ID", "Evento", "Preço", "Quantidade", "Data"], tablefmt="grid"))
+        else:
+            print("Nenhum evento disponível.")
+        
+        print("\n0. Voltar")
+        return ingressos
 
     def tela_comprar_ingresso(self):
         ingressos = self.tela_listar_ingressos()
-
         if not ingressos:
             input("\nPressione Enter para voltar...")
             return
-
         try:
             id_ingresso = int(input("\nID do Ingresso: "))
             quantidade = int(input("Quantidade: "))
-
-            self.sistema_service.realizar_compra(
-                self.auth_service.usuario_logado.id,
-                id_ingresso,
-                quantidade
-            )
-
-            input("\nCompra realizada com sucesso! Pressione Enter...")
-
-        except ValueError:
-            input("\nErro: Digite números válidos para ID e Quantidade! Pressione Enter...")
-
+            self.sistema_service.realizar_compra(self.auth_service.usuario_logado.id, id_ingresso, quantidade)
+            print("\n✅ Compra realizada com sucesso!")
         except Exception as e:
-            input(f"\nErro: {e}\nPressione Enter...")
-
-    def tela_atualizar_ingresso(self):
-        """Tela para atualizar um ingresso"""
-        self.limpar_tela()
-        self.exibir_titulo("ATUALIZAR INGRESSO")
-
-        ingressos = self.sistema_service.listar_ingressos()
-        if not ingressos:
-            print("Nenhum ingresso cadastrado.")
-            input("\nPressione Enter para voltar...")
-            return
-
-        data_tabela = []
-        for i in ingressos:
-            data_formatada = i.data_evento.strftime("%d/%m/%Y %H:%M") if hasattr(i.data_evento, 'strftime') else i.data_evento
-            data_tabela.append([i.id, i.evento, f"R${i.preco:.2f}", i.quantidade_disponivel, data_formatada])
-
-        print(tabulate(data_tabela, headers=["ID", "Evento", "Preço", "Qtd", "Data"], tablefmt="grid"))
-
-        try:
-            id_ingresso = int(input("\nID do ingresso que deseja atualizar: "))
-            ingresso = self.sistema_service.buscar_ingresso_por_id(id_ingresso)
-
-            if not ingresso:
-                print("Ingresso não encontrado!")
-                input("\nPressione Enter para voltar...")
-                return
-
-            data_atual_br = ingresso.data_evento.strftime("%d/%m/%Y %H:%M") if hasattr(ingresso.data_evento, 'strftime') else ingresso.data_evento
-
-            print(f"\nAtualizando: {ingresso.evento}")
-            print("(Deixe em branco para manter o valor atual)")
-
-            novo_evento = input(f"Novo nome do evento [{ingresso.evento}]: ").strip()
-
-            try:
-                novo_preco_str = input(f"Novo preço [R${ingresso.preco:.2f}]: ").strip()
-                novo_preco = float(novo_preco_str) if novo_preco_str else None
-            except ValueError:
-                print("Preço inválido! Mantendo valor atual.")
-                novo_preco = None
-
-            try:
-                nova_qtd_str = input(f"Nova quantidade [{ingresso.quantidade_disponivel}]: ").strip()
-                nova_qtd = int(nova_qtd_str) if nova_qtd_str else None
-            except ValueError:
-                print("Quantidade inválida! Mantendo valor atual.")
-                nova_qtd = None
-
-            nova_data_br = input(f"Nova data [{data_atual_br}]: ").strip()
-
-            print("\n" + "=" * 40)
-            print("RESUMO DA ATUALIZAÇÃO:")
-            if novo_evento: print(f"Evento: {ingresso.evento} -> {novo_evento}")
-            if novo_preco: print(f"Preço: R${ingresso.preco:.2f} -> R${novo_preco:.2f}")
-            if nova_qtd: print(f"Quantidade: {ingresso.quantidade_disponivel} -> {nova_qtd}")
-            if nova_data_br: print(f"Data: {data_atual_br} -> {nova_data_br}")
-
-            confirmar = input("\nConfirmar atualização? (s/n): ").lower()
-
-            if confirmar == 's':
-                self.sistema_service.atualizar_ingresso(
-                    id_ingresso,
-                    evento=novo_evento if novo_evento else None,
-                    preco=novo_preco,
-                    quantidade=nova_qtd,
-                    data_br=nova_data_br if nova_data_br else None
-                )
-                print("\n✅ Ingresso atualizado com sucesso!")
-            else:
-                print("\nOperação cancelada.")
-
-        except ValueError:
-            print("\nErro: ID inválido!")
-        except Exception as e:
-            print(f"\nErro: {e}")
-
+            print(f"\n❌ Erro: {e}")
         input("\nPressione Enter para voltar...")
 
-    def tela_deletar_ingresso(self):
-        """Tela para deletar um ingresso"""
+    def tela_meus_ingressos(self):
         self.limpar_tela()
-        self.exibir_titulo("DELETAR INGRESSO")
+        self.exibir_titulo("MEUS INGRESSOS")
         
-        ingressos = self.sistema_service.listar_ingressos()
-        if not ingressos:
-            print("Nenhum ingresso cadastrado.")
-            input("\nPressione Enter para voltar...")
-            return
+        compras = self.sistema_service.buscar_compras_por_usuario(self.auth_service.usuario_logado.id)
+        if compras:
+            data = [[c['id'], c['evento'], c['quantidade'], f"R${c['valor_total']:.2f}"] for c in compras]
+            print(tabulate(data, headers=["ID", "Evento", "Quantidade", "Total"], tablefmt="grid"))
+        else:
+            print("Nenhuma compra realizada.")
         
-        data = [[i.id, i.evento, f"R${i.preco:.2f}", i.quantidade_disponivel, i.data_evento] 
-                for i in ingressos]
-        print(tabulate(data, headers=["ID", "Evento", "Preço", "Qtd", "Data"], tablefmt="grid"))
+        print("\n0. Voltar")
+        input("\nPressione Enter para voltar...")
+
+    def tela_mais_vendidos(self):
+        """Mostra os eventos mais vendidos"""
+        self.limpar_tela()
+        self.exibir_titulo("🎯 EVENTOS MAIS VENDIDOS")
         
         try:
-            id_ingresso = int(input("\nID do ingresso que deseja deletar: "))
-            ingresso = self.sistema_service.buscar_ingresso_por_id(id_ingresso)
+            resultados = self.sistema_service.obter_mais_vendidos()
             
-            if not ingresso:
-                print("Ingresso não encontrado!")
-                input("\nPressione Enter para voltar...")
-                return
-            
-            print(f"\nVocê está prestes a deletar:")
-            print(f"Evento: {ingresso.evento}")
-            print(f"Preço: R${ingresso.preco:.2f}")
-            print(f"Quantidade: {ingresso.quantidade_disponivel}")
-            print(f"Data: {ingresso.data_evento}")
-            
-            print("\n⚠️  ATENÇÃO: Esta ação não pode ser desfeita!")
-            
-            confirmar = input("\nDigite 'DELETAR' para confirmar: ").strip().upper()
-            
-            if confirmar == 'DELETAR':
-                self.sistema_service.deletar_ingresso(id_ingresso)
-                print("\n✅ Ingresso deletado com sucesso!")
+            if resultados:
+                data = []
+                for item in resultados:
+                    data.append([
+                        item['id'],
+                        item['evento'],
+                        f"R$ {float(item['preco']):.2f}",
+                        item['data_evento'],
+                        item['total_vendido']
+                    ])
+                
+                print(tabulate(
+                    data,
+                    headers=["ID", "Evento", "Preço", "Data", "Quantidade Vendida"],
+                    tablefmt="grid"
+                ))
             else:
-                print("\nOperação cancelada.")
-            
-        except ValueError:
-            print("\nErro: ID inválido!")
+                print("Nenhum evento encontrado ou ainda não há vendas.")
+                
         except Exception as e:
-            print(f"\nErro: {e}")
+            print(f"Erro: {e}")
         
+        print("\n0. Voltar")
+        input("\nPressione Enter para voltar...")
+
+    def tela_listar_usuarios(self):
+        """Lista todos os usuários (super_admin apenas)"""
+        self.limpar_tela()
+        self.exibir_titulo("LISTA DE USUÁRIOS")
+        
+        try:
+            usuarios = self.sistema_service.listar_usuarios()
+            if usuarios:
+                data = [[u.id, u.nome, u.email, u.tipo] for u in usuarios]
+                print(tabulate(data, headers=["ID", "Nome", "Email", "Tipo"], tablefmt="grid"))
+            else:
+                print("Nenhum usuário encontrado.")
+        except Exception as e:
+            print(f"Erro: {e}")
+        
+        print("\n0. Voltar")
+        input("\nPressione Enter para voltar...")
+
+    def tela_criar_organizador(self):
+        """Cria um novo organizador (super_admin apenas)"""
+        self.limpar_tela()
+        self.exibir_titulo("CRIAR ORGANIZADOR")
+        
+        nome = input("Nome: ").strip()
+        email = input("Email: ").strip()
+        senha = input("Senha: ").strip()
+        
+        try:
+            self.sistema_service.cadastrar_usuario(nome, email, senha, tipo='organizador')
+            print("\n✅ Organizador criado com sucesso!")
+        except Exception as e:
+            print(f"\n❌ {e}")
+        
+        print("\n0. Voltar")
         input("\nPressione Enter para voltar...")
 
     def tela_atualizar_usuario(self):
-        """Tela para atualizar um usuário"""
+        """Atualiza dados de um usuário (super_admin apenas)"""
         self.limpar_tela()
         self.exibir_titulo("ATUALIZAR USUÁRIO")
         
         usuarios = self.sistema_service.listar_usuarios()
         if not usuarios:
-            print("Nenhum usuário cadastrado.")
-            input("\nPressione Enter para voltar...")
+            print("Nenhum usuário encontrado.")
+            input("\n0. Voltar")
             return
         
         data = [[u.id, u.nome, u.email, u.tipo] for u in usuarios]
         print(tabulate(data, headers=["ID", "Nome", "Email", "Tipo"], tablefmt="grid"))
         
         try:
-            id_usuario = int(input("\nID do usuário que deseja atualizar: "))
+            id_usuario = int(input("\nID do usuário para atualizar: "))
             
             if id_usuario == 1:
-                print("\n⚠️  O administrador padrão não pode ser alterado por segurança!")
-                input("\nPressione Enter para voltar...")
+                print("\n⚠️ Administrador padrão não pode ser alterado!")
+                input("\n0. Voltar")
                 return
             
-            usuario = self.sistema_service.buscar_usuario_por_id(id_usuario)
+            print("\nDeixe em branco para manter o valor atual")
+            novo_nome = input("Novo nome: ").strip() or None
+            novo_email = input("Novo email: ").strip() or None
+            nova_senha = input("Nova senha: ").strip() or None
             
-            if not usuario:
-                print("Usuário não encontrado!")
-                input("\nPressione Enter para voltar...")
-                return
+            self.sistema_service.atualizar_usuario(id_usuario, novo_nome, novo_email, nova_senha)
+            print("\n✅ Usuário atualizado com sucesso!")
             
-            print(f"\nAtualizando: {usuario.nome}")
-            print("(Deixe em branco para manter o valor atual)")
-            print("\n📋 REGRAS DE VALIDAÇÃO:")
-            print("• Nome: mínimo 3 caracteres")
-            print("• Email: formato usuario@dominio.com")
-            print("• Senha: mínimo 8 caracteres, com maiúsculas, minúsculas e números\n")
-            
-            novo_nome = input(f"Novo nome [{usuario.nome}]: ").strip()
-            if novo_nome == "":
-                novo_nome = None
-            
-            novo_email = input(f"Novo email [{usuario.email}]: ").strip()
-            if novo_email == "":
-                novo_email = None
-            
-            nova_senha = input("Nova senha (deixe em branco para não alterar): ").strip()
-            if nova_senha == "":
-                nova_senha = None
-            
-            print("\nTipos disponíveis: admin, cliente")
-            tipo_atual = usuario.tipo
-            novo_tipo_input = input(f"Novo tipo [{tipo_atual}]: ").strip()
-            novo_tipo = novo_tipo_input if novo_tipo_input in ['admin', 'cliente'] else None
-            
-            print("\n" + "=" * 40)
-            print("RESUMO DA ATUALIZAÇÃO:")
-            if novo_nome: print(f"Nome: {usuario.nome} -> {novo_nome}")
-            if novo_email: print(f"Email: {usuario.email} -> {novo_email}")
-            if nova_senha: print("Senha: [alterada]")
-            if novo_tipo: print(f"Tipo: {usuario.tipo} -> {novo_tipo}")
-            
-            confirmar = input("\nConfirmar atualização? (s/n): ").lower()
-            
-            if confirmar == 's':
-                self.sistema_service.atualizar_usuario(
-                    id_usuario,
-                    nome=novo_nome,
-                    email=novo_email,
-                    senha=nova_senha,
-                    tipo=novo_tipo
-                )
-                print("\n✅ Usuário atualizado com sucesso!")
-            else:
-                print("\nOperação cancelada.")
-            
-        except ValueError:
-            print("\nErro: ID inválido!")
         except Exception as e:
-            print(f"\nErro: {e}")
+            print(f"\n❌ {e}")
         
+        print("\n0. Voltar")
         input("\nPressione Enter para voltar...")
 
     def tela_deletar_usuario(self):
-        """Tela para deletar um usuário"""
+        """Deleta um usuário (super_admin apenas)"""
         self.limpar_tela()
         self.exibir_titulo("DELETAR USUÁRIO")
         
         usuarios = self.sistema_service.listar_usuarios()
         if not usuarios:
-            print("Nenhum usuário cadastrado.")
-            input("\nPressione Enter para voltar...")
+            print("Nenhum usuário encontrado.")
+            input("\n0. Voltar")
             return
         
         data = [[u.id, u.nome, u.email, u.tipo] for u in usuarios]
         print(tabulate(data, headers=["ID", "Nome", "Email", "Tipo"], tablefmt="grid"))
         
         try:
-            id_usuario = int(input("\nID do usuário que deseja deletar: "))
-            
-            if id_usuario == self.auth_service.usuario_logado.id:
-                print("\n❌ Erro: Você não pode deletar seu próprio usuário!")
-                input("\nPressione Enter para voltar...")
-                return
+            id_usuario = int(input("\nID do usuário para deletar: "))
             
             if id_usuario == 1:
-                print("\n⚠️  O administrador padrão não pode ser deletado!")
-                input("\nPressione Enter para voltar...")
+                print("\n⚠️ Administrador padrão não pode ser deletado!")
+                input("\n0. Voltar")
                 return
             
-            usuario = self.sistema_service.buscar_usuario_por_id(id_usuario)
-            
-            if not usuario:
-                print("Usuário não encontrado!")
-                input("\nPressione Enter para voltar...")
+            if id_usuario == self.auth_service.usuario_logado.id:
+                print("\n❌ Você não pode deletar seu próprio usuário!")
+                input("\n0. Voltar")
                 return
             
-            print(f"\nVocê está prestes a deletar:")
-            print(f"Nome: {usuario.nome}")
-            print(f"Email: {usuario.email}")
-            print(f"Tipo: {usuario.tipo}")
-            
-            print("\n⚠️  ATENÇÃO: Todas as compras deste usuário também serão deletadas!")
-            
-            confirmar = input("\nDigite 'DELETAR' para confirmar: ").strip().upper()
-            
-            if confirmar == 'DELETAR':
+            confirmar = input(f"\nTem certeza que deseja deletar o usuário ID {id_usuario}? (s/n): ")
+            if confirmar.lower() == 's':
                 self.sistema_service.deletar_usuario(id_usuario)
                 print("\n✅ Usuário deletado com sucesso!")
             else:
                 print("\nOperação cancelada.")
             
-        except ValueError:
-            print("\nErro: ID inválido!")
         except Exception as e:
-            print(f"\nErro: {e}")
+            print(f"\n❌ {e}")
         
-        input("\nPressione Enter para voltar...")
-    
-    def tela_meus_ingressos(self):
-        """Mostra os ingressos comprados pelo cliente"""
-        self.limpar_tela()
-        self.exibir_titulo("MEUS INGRESSOS COMPRADOS")
-        
-        try:
-            usuario_id = self.auth_service.usuario_logado.id
-            compras = self.sistema_service.buscar_compras_por_usuario(usuario_id)
-            
-            if not compras:
-                print("📭 Você ainda não comprou nenhum ingresso.")
-                print("\nQue tal conferir os eventos disponíveis? (opção 2)")
-            else:
-                data = []
-                total_gasto = 0
-                
-                for compra in compras:
-                    data_compra = compra['data_compra'].strftime("%d/%m/%Y %H:%M") if hasattr(compra['data_compra'], 'strftime') else compra['data_compra']
-                    data_evento = compra['data_evento'].strftime("%d/%m/%Y %H:%M") if hasattr(compra['data_evento'], 'strftime') else compra['data_evento']
-                    
-                    valor_compra = float(compra['valor_total'])
-                    total_gasto += valor_compra
-                    
-                    data.append([
-                        compra['id'],
-                        compra['evento'],
-                        data_evento,
-                        compra['quantidade'],
-                        f"R${valor_compra:.2f}",
-                        data_compra
-                    ])
-                
-                print(tabulate(
-                    data,
-                    headers=["ID Compra", "Evento", "Data do Evento", "Qtd", "Total Pago", "Data da Compra"],
-                    tablefmt="grid"
-                ))
-                
-                total_compras = len(compras)
-                total_ingressos = sum(c['quantidade'] for c in compras)
-                
-                print("\n" + "=" * 40)
-                print("📊 RESUMO:")
-                print(f"Total de compras realizadas: {total_compras}")
-                print(f"Total de ingressos adquiridos: {total_ingressos}")
-                print(f"Total gasto: R${total_gasto:.2f}")
-                print("=" * 40)
-                
-        except Exception as e:
-            print(f"\nErro ao buscar seus ingressos: {e}")
-            import traceback
-            traceback.print_exc()
-        
+        print("\n0. Voltar")
         input("\nPressione Enter para voltar...")
 
 

@@ -7,21 +7,12 @@ class BaseRepository:
 
 class UsuarioRepository(BaseRepository):
     def create(self, usuario: Usuario):
-        print(f"\n📝 DEBUG CADASTRO:")
-        print(f"Nome: '{usuario.nome}'")
-        print(f"Email: '{usuario.email}'")
-        print(f"Senha: '{usuario.senha}'")
-        print(f"Tipo: '{usuario.tipo}'")
-        
         cursor = self.db.get_cursor(dictionary=False)
         if not cursor: return None
         query = "INSERT INTO usuario (nome, email, senha, tipo) VALUES (%s, %s, %s, %s)"
         cursor.execute(query, (usuario.nome, usuario.email, usuario.senha, usuario.tipo))
         self.db.commit()
         usuario.id = cursor.lastrowid
-        
-        print(f"✅ Usuário inserido com ID: {usuario.id}")
-        
         cursor.close()
         return usuario
 
@@ -34,20 +25,16 @@ class UsuarioRepository(BaseRepository):
         return [Usuario(**row) for row in rows]
 
     def find_by_email(self, email: str):
-        print(f"\n🔍 Buscando usuário com email: '{email}'")
         cursor = self.db.get_cursor()
         if not cursor: 
-            print("❌ Cursor não disponível")
             return None
         cursor.execute("SELECT * FROM usuario WHERE email = %s", (email,))
         row = cursor.fetchone()
         cursor.close()
-        
+    
         if row:
-            print(f"✅ Usuário encontrado: {row}")
             return Usuario(**row)
         else:
-            print(f"❌ Nenhum usuário encontrado com email: '{email}'")
             return None
 
     def find_by_id(self, id: int):
@@ -75,12 +62,13 @@ class UsuarioRepository(BaseRepository):
         cursor.close()
         return True
 
+
 class IngressoRepository(BaseRepository):
     def create(self, ingresso: Ingresso):
         cursor = self.db.get_cursor(dictionary=False)
         if not cursor: return None
-        query = "INSERT INTO ingresso (evento, preco, quantidade_disponivel, data_evento) VALUES (%s, %s, %s, %s)"
-        cursor.execute(query, (ingresso.evento, ingresso.preco, ingresso.quantidade_disponivel, ingresso.data_evento))
+        query = "INSERT INTO ingresso (evento, preco, quantidade_disponivel, data_evento, organizador_id) VALUES (%s, %s, %s, %s, %s)"
+        cursor.execute(query, (ingresso.evento, ingresso.preco, ingresso.quantidade_disponivel, ingresso.data_evento, ingresso.organizador_id))
         self.db.commit()
         ingresso.id = cursor.lastrowid
         cursor.close()
@@ -89,9 +77,7 @@ class IngressoRepository(BaseRepository):
     def find_all(self):
         cursor = self.db.get_cursor()
         if not cursor: return []
-        
-        # Especificar apenas as colunas que existem
-        cursor.execute("SELECT id, evento, preco, quantidade_disponivel, data_evento FROM ingresso")
+        cursor.execute("SELECT id, evento, preco, quantidade_disponivel, data_evento, organizador_id FROM ingresso ORDER BY data_evento ASC")
         rows = cursor.fetchall()
         cursor.close()
         
@@ -102,16 +88,16 @@ class IngressoRepository(BaseRepository):
                 evento=row['evento'],
                 preco=float(row['preco']),
                 quantidade_disponivel=int(row['quantidade_disponivel']),
-                data_evento=row['data_evento']
+                data_evento=row['data_evento'],
+                organizador_id=row['organizador_id']
             )
             ingressos.append(ingresso)
-        
         return ingressos
 
     def find_by_id(self, id: int):
         cursor = self.db.get_cursor()
         if not cursor: return None
-        cursor.execute("SELECT id, evento, preco, quantidade_disponivel, data_evento FROM ingresso WHERE id = %s", (id,))
+        cursor.execute("SELECT id, evento, preco, quantidade_disponivel, data_evento, organizador_id FROM ingresso WHERE id = %s", (id,))
         row = cursor.fetchone()
         cursor.close()
         if row:
@@ -120,9 +106,36 @@ class IngressoRepository(BaseRepository):
                 evento=row['evento'],
                 preco=float(row['preco']),
                 quantidade_disponivel=int(row['quantidade_disponivel']),
-                data_evento=row['data_evento']
+                data_evento=row['data_evento'],
+                organizador_id=row['organizador_id']
             )
         return None
+
+    def find_by_organizador(self, organizador_id: int):
+        """Busca ingressos de um organizador específico"""
+        cursor = self.db.get_cursor()
+        if not cursor: return []
+        cursor.execute("""
+            SELECT id, evento, preco, quantidade_disponivel, data_evento, organizador_id 
+            FROM ingresso 
+            WHERE organizador_id = %s
+            ORDER BY data_evento ASC
+        """, (organizador_id,))
+        rows = cursor.fetchall()
+        cursor.close()
+        
+        ingressos = []
+        for row in rows:
+            ingresso = Ingresso(
+                id=row['id'],
+                evento=row['evento'],
+                preco=float(row['preco']),
+                quantidade_disponivel=int(row['quantidade_disponivel']),
+                data_evento=row['data_evento'],
+                organizador_id=row['organizador_id']
+            )
+            ingressos.append(ingresso)
+        return ingressos
 
     def update(self, ingresso: Ingresso):
         cursor = self.db.get_cursor(dictionary=False)
@@ -140,6 +153,7 @@ class IngressoRepository(BaseRepository):
         self.db.commit()
         cursor.close()
         return True
+
 
 class CompraRepository(BaseRepository):
     def create(self, compra: CompraIngresso):
@@ -182,6 +196,21 @@ class CompraRepository(BaseRepository):
             raise e
         finally:
             cursor.close()
+
+    def get_mais_vendidos(self):
+        cursor = self.db.get_cursor()
+        if not cursor: return []
+        cursor.execute("""
+            SELECT i.id, i.evento, i.preco, i.data_evento, COALESCE(SUM(c.quantidade), 0) as total_vendido
+            FROM ingresso i
+            LEFT JOIN compra_ingresso c ON i.id = c.ingresso_id
+            GROUP BY i.id
+            ORDER BY total_vendido DESC
+            LIMIT 10
+        """)
+        results = cursor.fetchall()
+        cursor.close()
+        return results
 
     def find_by_usuario_id(self, usuario_id: int):
         cursor = self.db.get_cursor()
